@@ -16,7 +16,6 @@ class Order(models.Model):
                                       related_name='orders',
                                       through='ProductsInOrder',
                                       through_fields=('order', 'product'),
-                                      null=True,
                                       blank=True
                                       )
     created_at = models.DateTimeField(auto_now=True)
@@ -34,15 +33,16 @@ class Order(models.Model):
 
 
 class ProductsInOrder(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='products_in_order')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='products_in_order')
     quantity = models.PositiveIntegerField(default=1)
+    total_cost_by_qty = models.DecimalField(max_digits=10, decimal_places=2, blank=True)
     total_price_by_qty = models.DecimalField(max_digits=10, decimal_places=2, blank=True)
 
     def save(self, *args, **kwargs):
         self.total_price_by_qty = self.product.price * self.quantity
+        self.total_cost_by_qty = self.product.cost * self.quantity
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.quantity} products {self.product.title} in order №{self.order.id}"
-
