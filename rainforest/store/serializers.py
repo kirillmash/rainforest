@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Product, Order, ProductsInOrder
+from .models import Product, Order, ProductsInOrder, Reports
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -38,28 +38,6 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         ]
 
 
-# class ProductsListInOrderSerializer(serializers.ModelSerializer):
-#     product = serializers.SerializerMethodField()
-#     quantity = serializers.SerializerMethodField()
-#
-#     @staticmethod
-#     def get_product(instance):
-#         return instance.title
-#
-#     @staticmethod
-#     def get_quantity(instance):
-#         print(instance)
-#         # return instance.products_in_order.get(product=instance).quantity
-#         return ''
-#
-#     class Meta:
-#         model = ProductsInOrder
-#         fields = [
-#             'product',
-#             'quantity'
-#         ]
-
-
 class OrderSerializer(serializers.ModelSerializer):
     products = serializers.SerializerMethodField()
 
@@ -78,12 +56,13 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
 
-class ReportProductsInOrderSerializer(serializers.ModelSerializer):
-    revenue = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
-    profit = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
-    product__title = serializers.CharField(required=False)
-    quantity_sold = serializers.IntegerField(required=False)
-
+class ReportSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ProductsInOrder
-        fields = ('product__title', 'revenue',  'profit', 'quantity_sold')
+        model = Reports
+        fields = [
+            'id',
+            'title',
+            'file',
+            'date',
+            'is_ready'
+        ]
