@@ -11,18 +11,31 @@ services:
       - 5432
 
   web:
-    build:
-      context: 'rainforest/'
+    build: ./rainforest
     command: >
-      sh -c "python /app/rainforest/manage.py migrate
-      && python /app/rainforest/manage.py runserver 0.0.0.0:8000"
+      sh -c "python /app/manage.py migrate
+      && python /app/manage.py runserver 0.0.0.0:8000"
     volumes:
-      - .:/app
+      - ./rainforest:/app
     ports:
       - "8000:8000"
     env_file:
       - rainforest/.env
     depends_on:
       - db
+
+  celery:
+    build: ./rainforest
+    command: celery -A rainforest worker --loglevel=info --logfile=logs/celery.log
+    volumes:
+      - ./rainforest:/app
+    env_file:
+      - rainforest/.env
+    depends_on:
+      - web
+      - redis
+
+  redis:
+    image: redis:5-alpine
 volumes:
   postgres_data:

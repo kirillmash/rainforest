@@ -1,27 +1,32 @@
-from django.db.models import Count, Sum, F
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from .models import Product, ProductsInOrder, Order
-from .serializers import ProductSerializer, OrderSerializer, OrderCreateSerializer, ReportProductsInOrderSerializer
+from .serializers import ProductSerializer, OrderSerializer, OrderCreateSerializer, ReportSerializer
+from .services import get_all_products, get_products_by_pk, create_order_with_products, get_all_orders, get_order_by_pk, \
+    update_status_order
+from .models import Product, Order
+from .tasks import create_task_report
 
 
 class ProductsAPIVIew(APIView):
 
-    def get(self, request):
+    @staticmethod
+    def get(request):
         products_id = request.query_params.get('id', None)
-        products = Product.objects.all()
         if products_id:
-            products = products.filter(id=products_id)
+            products = get_products_by_pk(products_id)
+        else:
+            products = get_all_products()
 
         serializer = ProductSerializer(products, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
-    def patch(self, request):
+    @staticmethod
+    def patch(request):
         products_id = request.query_params.get('id', None)
         try:
-            product = Product.objects.get(id=products_id)
+            product = get_products_by_pk(products_id)
         except Product.DoesNotExist as e:
             return Response(status=status.HTTP_404_NOT_FOUND,
                             data={'detail': f'Product with id={products_id} not found'})
@@ -34,32 +39,26 @@ class ProductsAPIVIew(APIView):
 
 class OrdersAPIView(APIView):
 
-    def post(self, request):
+    @staticmethod
+    def post(request):
         serializer = OrderCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(status=status.HTTP_400_BAD_REQUEST, data=serializer.errors)
-        order = Order.objects.create()
-        products = []
-        for product in serializer.validated_data['products']:
-            new_product = ProductsInOrder.objects.create(order=order,
-                                                         product=product.get('product'),
-                                                         quantity=product.get('quantity', 1))
-            products.append(new_product)
-            order.total_price += new_product.total_price_by_qty
-
-        order.save()
+        order = create_order_with_products(products=serializer.validated_data['products'])
         serialized = OrderSerializer(order)
         return Response(status=status.HTTP_201_CREATED, data=serialized.data)
 
-    def get(self, request):
-        orders = Order.objects.all()
+    @staticmethod
+    def get(request):
+        orders = get_all_orders()
         serializer = OrderSerializer(orders, many=True)
         return Response(status=status.HTTP_200_OK, data=serializer.data)
 
-    def patch(self, request):
+    @staticmethod
+    def patch(request):
         order_id = request.query_params.get('id', None)
         try:
-            order = Order.objects.get(id=order_id)
+            order = get_order_by_pk(order_id)
         except Order.DoesNotExist as e:
             return Response(status=status.HTTP_404_NOT_FOUND,
                             data={'detail': f'Order with id={order_id} not found'})
@@ -67,18 +66,19 @@ class OrdersAPIView(APIView):
         if status_order is None:
             return Response(status=status.HTTP_400_BAD_REQUEST,
                             data={'detail': 'Status is required'})
-        order.status = int(status_order)
-        order.save()
+        update_status_order(order, int(status_order))
         return Response(status=status.HTTP_200_OK)
 
 
 class ConsolidatedReportAPIView(APIView):
 
-    def get(self, request):
-        queryset = ProductsInOrder.objects.values('product__title').annotate(count=Count('product')).annotate(
-            revenue=Sum('total_price_by_qty'), expenses=Sum('total_cost_by_qty'),
-            quantity_sold=Sum('quantity')).annotate(
-            profit=F('revenue') - F('expenses')
-        )
-        ser = ReportProductsInOrderSerializer(queryset, many=True)
-        return Response(data=ser.data, status=status.HTTP_200_OK)
+    @staticmethod
+    def post(request):
+        date1 = request.data.get('date1')
+        date2 = request.data.get('date2')
+        if not date1:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={'detail': 'date1 is required'})
+        if not date2:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={'detail': 'date2 is required'})
+        create_task_report.delay(date1=date1, date2=date2)
+        return Response(status=status.HTTP_200_OK)

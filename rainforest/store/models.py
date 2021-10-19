@@ -29,7 +29,7 @@ class Order(models.Model):
     status = models.IntegerField(choices=STATUSES, default=2)
 
     def __str__(self):
-        return f"Order №{self.id}, total price - {self.total_price}, status - {self.status}"
+        return f"Order №{self.pk}, total price - {self.total_price}, status - {self.status}"
 
 
 class ProductsInOrder(models.Model):
@@ -45,4 +45,11 @@ class ProductsInOrder(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.quantity} products {self.product.title} in order №{self.order.id}"
+        return f"{self.quantity} products {self.product.title} in order №{self.order.pk}"
+
+
+class Reports(models.Model):
+    title = models.CharField(max_length=255)
+    file = models.FileField(null=True, blank=True)
+    date = models.DateTimeField(auto_now=True)
+    is_ready = models.BooleanField(default=False)
