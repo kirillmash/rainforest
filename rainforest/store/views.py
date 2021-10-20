@@ -14,14 +14,14 @@ class ProductsAPIVIew(APIView):
 
     @staticmethod
     def get(request):
-        """Get list of products"""
+        """Get list of products or one product by pk"""
         products_id = request.query_params.get('id', None)
         if products_id:
-            products = get_products_by_pk(products_id)
+            product = get_products_by_pk(products_id)
+            serializer = ProductSerializer(product)
         else:
             products = get_all_products()
-
-        serializer = ProductSerializer(products, many=True)
+            serializer = ProductSerializer(products, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
     @staticmethod
@@ -61,7 +61,7 @@ class OrdersAPIView(APIView):
         try:
             order = create_order_with_products(products=serializer.validated_data['products'])
         except ProductsNotEnough as e:
-            return Response(status=status.HTTP_400_BAD_REQUEST, data={"detail": f"Quantity product less then required"})
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={"detail": "Quantity product less then required"})
         serialized = OrderSerializer(order)
         return Response(status=status.HTTP_201_CREATED, data=serialized.data)
 
