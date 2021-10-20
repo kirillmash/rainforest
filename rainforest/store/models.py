@@ -61,10 +61,3 @@ class ProductsInOrder(models.Model):
 
     def __str__(self):
         return f"{self.quantity} products {self.product.title} in order №{self.order.pk}"
-
-
-class Reports(models.Model):
-    title = models.CharField(verbose_name='title of report', max_length=255)
-    file = models.FileField(verbose_name='report file in csv', null=True, blank=True)
-    date = models.DateTimeField(verbose_name='when report is created report', auto_now=True)
-    is_ready = models.BooleanField(verbose_name='report is ready?', default=False)
