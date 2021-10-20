@@ -4,8 +4,9 @@
 RESTful API service
 
 # Run application
+1. Update .env file with your data
 
-1. With docker: `docker-compose up` (docker should be installed)
+2. With docker: `docker-compose up` (docker should be installed)
 
 Application will be available at http://127.0.0.1:8000
 
