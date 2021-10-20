@@ -31,7 +31,7 @@ def create_task_report(date1, date2):
             from operations
             where operations.status = 1 and operations.created_at  between  %(date1)s and %(date2)s
             group by operations.product_id) sold_stats on p.id=sold_stats.product_id
-    left join (select product_id, sum(quantity) as refund_qty from operations where status=3 and created_at  between
+    left join (select product_id, sum(quantity) as refund_qty from operations where status=4 and created_at  between
      %(date1)s and %(date2)s group by product_id) refunds
         on refunds.product_id=p.id"""
 
