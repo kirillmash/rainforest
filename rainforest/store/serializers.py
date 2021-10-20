@@ -13,7 +13,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'price',
             'quantity'
         ]
-        read_only_fields = ('id', 'title',)
+        read_only_fields = ('id',)
 
 
 class ProductsInOrderSerializer(serializers.ModelSerializer):
