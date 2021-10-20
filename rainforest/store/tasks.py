@@ -4,59 +4,37 @@ from datetime import datetime
 
 from django.conf import settings
 from celery import shared_task
-from django.db import connection
+from django.core.mail import EmailMessage
 
-from .models import Reports
+from .services import get_data_for_report
 
 
 @shared_task
-def create_task_report(date1, date2):
-    sql = """with operations as (
-        select pio.product_id, o.status, o.created_at, 
-               coalesce(pio.quantity, 0) as quantity, pio.total_cost_by_qty, pio.total_price_by_qty
-        from store_productsinorder pio
-        left join store_order o on o.id=pio.order_id
-    )
-    select p.id as product_id , p.title as product_title,
-           coalesce(sold_stats.sold_qty, 0) as sold_qty,
-           coalesce(refunds.refund_qty, 0) as refund_qty,
-           coalesce(sold_stats.sum_revenue, 0) as sum_revenue,
-           coalesce(sold_stats.sum_revenue - sold_stats.sum_cost, 0) as profit
-    from store_product p
-    left join (
-            select operations.product_id,
-                   sum(operations.quantity)           as sold_qty,
-                   sum(operations.total_price_by_qty) as sum_revenue,
-                   sum(operations.total_cost_by_qty)  as sum_cost
-            from operations
-            where operations.status = 1 and operations.created_at  between  %(date1)s and %(date2)s
-            group by operations.product_id) sold_stats on p.id=sold_stats.product_id
-    left join (select product_id, sum(quantity) as refund_qty from operations where status=4 and created_at  between
-     %(date1)s and %(date2)s group by product_id) refunds
-        on refunds.product_id=p.id"""
+def create_task_report(date_start: str, date_end: str, email: str) -> None:
+    """Task for generate report in csv format and send on email"""
+    today = datetime.now().strftime('%d-%m-%Y %H-%M-%S')
+    os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
 
-    today = datetime.now()
-    year = today.strftime("%Y")
-    month = today.strftime("%m")
-    day_time = today.strftime('%d-%H%M%S')
+    data, column_names = get_data_for_report(date_start, date_end)
 
-    dir_path = os.path.join(settings.MEDIA_ROOT, 'reports', year, month)
-    os.makedirs(dir_path, exist_ok=True)
+    file_name = f"{today}_report.csv"
+    full_path = os.path.join(settings.MEDIA_ROOT, file_name)
 
-    report = Reports.objects.create(title=day_time)
-    cursor = connection.cursor()
-    cursor.execute(sql, {'date1': date1, 'date2': date2})
-    data = cursor.fetchall()
-
-    column_names = [desc[0] for desc in cursor.description]
-
-    full_path = os.path.join(dir_path, f"{day_time}.csv")
-    fp = open(full_path, 'w')
+    fp = open(full_path, 'w+')
     report_file = csv.writer(fp, delimiter=';')
     report_file.writerow(column_names)
     report_file.writerows(data)
-    report.file = full_path
-    report.is_ready = True
-    report.save()
+    email_message = EmailMessage(
+        'Hello, this is report for you',
+        today,
+        settings.EMAIL_HOST_USER,
+        [email],
+    )
     fp.close()
-    return True
+
+    fp = open(full_path, 'r')
+
+    email_message.attach(filename=file_name, content=fp.read(), mimetype='text/csv')
+    email_message.send()
+    fp.close()
+    os.remove(full_path)

@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
-from .serializers import ProductSerializer, OrderSerializer, OrderCreateSerializer, ReportSerializer
+from .serializers import ProductSerializer, OrderSerializer, OrderCreateSerializer
 from .services import get_all_products, get_products_by_pk, create_order_with_products, get_all_orders, get_order_by_pk, \
     update_status_order, add_product
 from .models import Product, Order
@@ -94,11 +94,14 @@ class ConsolidatedReportAPIView(APIView):
     @staticmethod
     def post(request):
         """Create report with date range"""
-        date1 = request.data.get('date1')
-        date2 = request.data.get('date2')
-        if not date1:
-            return Response(status=status.HTTP_400_BAD_REQUEST, data={'detail': 'date1 is required'})
-        if not date2:
-            return Response(status=status.HTTP_400_BAD_REQUEST, data={'detail': 'date2 is required'})
-        create_task_report.delay(date1=date1, date2=date2)
+        date_start = request.data.get('date_start')
+        date_end = request.data.get('date_end')
+        email = request.data.get('email')
+        if not email:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={'detail': 'email is required'})
+        if not date_start:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={'detail': 'date_start is required'})
+        if not date_end:
+            return Response(status=status.HTTP_400_BAD_REQUEST, data={'detail': 'date_end is required'})
+        create_task_report.delay(date_start=date_start, date_end=date_end, email=email)
         return Response(status=status.HTTP_200_OK)

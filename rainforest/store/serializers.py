@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Product, Order, ProductsInOrder, Reports
+from .models import Product, Order, ProductsInOrder
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -55,14 +55,3 @@ class OrderSerializer(serializers.ModelSerializer):
             'status',
         ]
 
-
-class ReportSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Reports
-        fields = [
-            'id',
-            'title',
-            'file',
-            'date',
-            'is_ready'
-        ]

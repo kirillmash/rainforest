@@ -6,4 +6,3 @@ admin.site.register(Order)
 admin.site.register(Product)
 admin.site.register(ProductsInOrder)
 
-# Register your models here.
