@@ -17,7 +17,11 @@ class ProductsAPIVIew(APIView):
         """Get list of products or one product by pk"""
         products_id = request.query_params.get('id', None)
         if products_id:
-            product = get_products_by_pk(products_id)
+            try:
+                product = get_products_by_pk(products_id)
+            except Product.DoesNotExist as e:
+                return Response(status=status.HTTP_404_NOT_FOUND,
+                                data={"detail": f"Product with id={products_id} not found"})
             serializer = ProductSerializer(product)
         else:
             products = get_all_products()
