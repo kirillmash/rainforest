@@ -20,21 +20,19 @@ def create_task_report(date_start: str, date_end: str, email: str) -> None:
     file_name = f"{today}_report.csv"
     full_path = os.path.join(settings.MEDIA_ROOT, file_name)
 
-    fp = open(full_path, 'w+')
-    report_file = csv.writer(fp, delimiter=';')
-    report_file.writerow(column_names)
-    report_file.writerows(data)
+    with open(full_path, 'w') as f:
+        report_file = csv.writer(f, delimiter=';')
+        report_file.writerow(column_names)
+        report_file.writerows(data)
     email_message = EmailMessage(
         'Hello, this is report for you',
         today,
         settings.EMAIL_HOST_USER,
         [email],
     )
-    fp.close()
 
-    fp = open(full_path, 'r')
+    with open(full_path, 'r') as f:
+        email_message.attach(filename=file_name, content=f.read(), mimetype='text/csv')
+        email_message.send()
 
-    email_message.attach(filename=file_name, content=fp.read(), mimetype='text/csv')
-    email_message.send()
-    fp.close()
     os.remove(full_path)
